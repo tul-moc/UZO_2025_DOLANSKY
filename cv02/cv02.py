@@ -2,9 +2,9 @@ import numpy as np
 import cv2
 import os
 
-def track_object(frame, roi_hist, window):
+def track_object(frame, hist, window):
     hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    back_proj = cv2.calcBackProject([hsv_frame], [0], roi_hist, [0, 180], 1)
+    back_proj = cv2.calcBackProject([hsv_frame], [0], hist, [0, 180], 1)
 
     x, y, w, h = window
 
