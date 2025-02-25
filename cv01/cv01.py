@@ -18,18 +18,19 @@ if __name__ == "__main__":
     
     for image_path in images_path:
         img = cv.imread(image_path)
-        resized_img = cv.resize(img, (100, 100))
-        images.append((image_path, resized_img))
-        histograms.append(cv.calcHist([img], [0], None, [256], [0, 256]))
+        if img is not None:
+            resized_img = cv.resize(img, (50, 50))
+            images.append((image_path, resized_img))
+            histograms.append(cv.calcHist([resized_img], [0], None, [256], [0, 256]))
     
     sorted_images = []
     for i, (path, img) in enumerate(images):
         distances = []
         for j, hist in enumerate(histograms):
             if i != j:
-                dist = cv.compareHist(histograms[i], hist, cv.HISTCMP_CORREL)
+                dist = cv.compareHist(histograms[i], hist, cv.HISTCMP_BHATTACHARYYA)
                 distances.append((dist, images[j][1]))
-        sorted_images.append((img, [x[1] for x in sorted(distances, key=lambda x: x[0], reverse=True)]))
+        sorted_images.append((img, [x[1] for x in sorted(distances, key=lambda x: x[0])]))
     
     rows = len(images)
     cols = len(images)
@@ -39,7 +40,7 @@ if __name__ == "__main__":
         axes[row, 0].imshow(cv.cvtColor(orig_img, cv.COLOR_BGR2RGB))
         axes[row, 0].axis('off')
         
-        for col, img in enumerate(sorted_imgs, start=1):
+        for col, img in enumerate(sorted_imgs[:cols-1], start=1):
             axes[row, col].imshow(cv.cvtColor(img, cv.COLOR_BGR2RGB))
             axes[row, col].axis('off')
     
