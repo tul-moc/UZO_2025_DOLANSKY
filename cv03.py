@@ -1,54 +1,62 @@
-import numpy as np
 import cv2
+import numpy as np
 import argparse
 
-def argparser():
-    parser = argparse.ArgumentParser(description="Process an integer argument.")
-    parser.add_argument('integer', type=int, help='An integer argument')
-    args = parser.parse_args()
-    return args.integer
+def loadImage(path: str):
+    return cv2.imread(path)
 
-def main():
-    integer_arg = argparser()
-    print(f"Integer argument received: {integer_arg}")
-    image = cv2.imread("cv03_robot.bmp")
-    
-    # Get the image dimensions (height, width)
+def closestNeighbor(image, x, y):
+    h, w = image.shape[:2]
+    x = round(x)
+    y = round(y)
+    return image[y, x]
+
+def rotateImage(image, degree):
     (h, w) = image.shape[:2]
     
-    # Calculate the center of the image
     center = (w // 2, h // 2)
     
-    # Calculate the new bounding dimensions of the image
-    angle_rad = np.deg2rad(integer_arg)
+    angle_rad = np.deg2rad(degree)
     cos_angle = np.cos(angle_rad)
     sin_angle = np.sin(angle_rad)
     new_w = int(abs(h * sin_angle) + abs(w * cos_angle))
     new_h = int(abs(h * cos_angle) + abs(w * sin_angle))
     
-    # Calculate the new center of the image
     new_center = (new_w // 2, new_h // 2)
     
-    # Perform the rotation manually using a for loop
-    rotated = np.zeros((new_h, new_w, 3), dtype=image.dtype)
+    rotated = np.zeros((new_h, new_w, image.shape[2]), dtype=image.dtype)
     
-    for y in range(h):
-        for x in range(w):
-            # Translate coordinates to origin
-            x_translated = x - center[0]
-            y_translated = y - center[1]
+    for y in range(new_h):
+        for x in range(new_w):
+            x_translated = x - new_center[0]
+            y_translated = y - new_center[1]
             
-            # Rotate coordinates
-            x_rotated = int(x_translated * cos_angle - y_translated * sin_angle + new_center[0])
-            y_rotated = int(x_translated * sin_angle + y_translated * cos_angle + new_center[1])
+            x_rotated = int(x_translated * cos_angle + y_translated * sin_angle + center[0])
+            y_rotated = int(-x_translated * sin_angle + y_translated * cos_angle + center[1])
             
-            # Check if the new coordinates are within the image bounds
-            if 0 <= x_rotated < new_w and 0 <= y_rotated < new_h:
-                rotated[y_rotated, x_rotated] = image[y, x]
+            if 0 <= x_rotated < w and 0 <= y_rotated < h:
+                rotated[y, x] = closestNeighbor(image, x_rotated, y_rotated)
+    return rotated
     
-    cv2.imshow("robot", rotated)
+
+def main(args):
+    image = loadImage("cv03_robot.bmp")
+    if args.degree:
+        degree = float(args.degree)
+        rotated = rotateImage(image, degree)
+    cv2.imshow("robot",rotated)
+    cv2.imshow("image",image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-if __name__ == "__main__":
-    main()
+def parser_init() -> argparse.ArgumentParser:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument(
+        "-d", "--degree", type=float, help="Degree of rotation"
+    )
+    return argparser
+
+if __name__=="__main__":
+    argparser: argparse.ArgumentParser = parser_init()
+    args: argparse.Namespace = argparser.parse_args()
+    main(args)
