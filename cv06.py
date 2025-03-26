@@ -87,12 +87,12 @@ def display_results(image, original_spectrum, image_lap, laplace_spectrum):
     plt.colorbar(label="Intensity")
     
     plt.subplot(2, 2, 3)
-    plt.title("Laplace Filtered Image")
+    plt.title("Filtered Image")
     plt.imshow(image_lap, cmap="jet")
     plt.colorbar(label="Intensity")
     
     plt.subplot(2, 2, 4)
-    plt.title("Spectrum of Laplace Filtered Image")
+    plt.title("Spectrum of Filtered Image")
     plt.imshow(laplace_spectrum, cmap="jet")
     plt.colorbar(label="Intensity")
     
