@@ -17,35 +17,55 @@ def threshold_image(green_channel):
     _, binary = cv2.threshold(green_channel.astype(np.uint8), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return binary
 
-def color_regions(binary):
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(binary, connectivity=4)
-    labels_filtered = labels.copy()
-    coins_info = []
-    for i in range(1, num_labels):
-        coin_type = "5" if stats[i, cv2.CC_STAT_AREA] > 4000 else "1"
-        coins_info.append({
-            'label': i,
-            'type': coin_type,
-            'area': stats[i, cv2.CC_STAT_AREA],
-            'centroid': centroids[i]
-        })
-    return labels_filtered, coins_info
+def customConnectedComponents(binary_image):
+    h, w = binary_image.shape
+    labels = np.zeros((h, w), dtype=np.int32)
+    current_label = 1
+    coins = []
+    
+    def dfs(i, j):
+        stack = [(i, j)]
+        pixels = []
+        while stack:
+            ci, cj = stack.pop()
+            if labels[ci, cj] != 0:
+                continue
+            labels[ci, cj] = current_label
+            pixels.append((ci, cj))
+            for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                ni, nj = ci + di, cj + dj
+                if 0 <= ni < h and 0 <= nj < w:
+                    if binary_image[ni, nj] == 255 and labels[ni, nj] == 0:
+                        stack.append((ni, nj))
+        return pixels
 
-def draw_centroids(image, coins_info):
-    image_with_centroids = image.copy()
+    for i in range(h):
+        for j in range(w):
+            if binary_image[i, j] == 255 and labels[i, j] == 0:
+                pixels = dfs(i, j)
+                pixels_count = len(pixels)
+                centroid_x = sum(j for i, j in pixels) / pixels_count
+                centroid_y = sum(i for i, j in pixels) / pixels_count
+                coin_value = "5" if pixels_count > 4000 else "1"
+                coins.append({
+                    'centroid': (centroid_x, centroid_y),
+                    'type': coin_value
+                })
+                current_label += 1
+    return labels, coins
+
+
+def drawCentroids(image, coins):
+    centroids = image.copy()
     total_value = 0
-    for coin in coins_info:
+    for coin in coins:
         x, y = map(int, coin['centroid'])
-        cv2.circle(image_with_centroids, (x, y), 5, (0, 0, 255), -1)
-        cv2.putText(image_with_centroids, 
-                    f"{coin['type']}", 
-                    (x+10, y+10), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 
-                    0.5, 
-                    (0, 0, 255), 
-                    2)
+        cv2.circle(centroids, (x, y), 5, (0, 0, 255), -1)
+        cv2.putText(centroids, f"{coin['type']} Kč", (x+10, y+10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         total_value += int(coin['type'])
-    return image_with_centroids, total_value
+        print(f"Na souřadnici ({x}, {y}) je mince {coin['type']} CZK")
+    return centroids, total_value
 
 def plotResults(img_orig, green_channel, labels, img_with_centroids, total_value):
     plt.figure(figsize=(16, 4))
@@ -74,9 +94,9 @@ def main():
     image = loadImage(image_path)
     green_channel = calculateGreenChannel(image)
     binary = threshold_image(green_channel)
-    labels, coins_info = color_regions(binary)
-    img_with_centroids, total_value = draw_centroids(image, coins_info)
-    plotResults(image, green_channel, labels, img_with_centroids, total_value)
+    labels, coins = customConnectedComponents(binary)
+    centroids, total_value = drawCentroids(image, coins)
+    plotResults(image, green_channel, labels, centroids, total_value)
 
 if __name__ == "__main__":
     main()
